@@ -1,4 +1,6 @@
+import io
 from pathlib import Path
+from threading import Lock
 
 import numpy as np
 import torch
@@ -7,6 +9,7 @@ from fastapi import FastAPI, File, Form
 from PIL import Image
 from sam2.build_sam import build_sam2
 from sam2.sam2_image_predictor import SAM2ImagePredictor
+from typing_extensions import Annotated
 
 host = "127.0.0.1"
 port = 8000
@@ -26,12 +29,27 @@ def main():
 
     sam2_model = build_sam2(model_cfg, sam2_checkpoint, device="cuda")
     predictor = SAM2ImagePredictor(sam2_model)
+    sam2_model_lock = Lock()
+
+    uploaded_images: list[np.ndarray] = []
+    uploaded_images_lock = Lock()
 
     app = FastAPI()
 
     @app.get("/")
     def index():
         return {"code": 0, "data": "Hello World"}
+
+    @app.post("/api/upload_image")
+    async def api_upload_images(file: Annotated[bytes, File()]):
+        image_data = Image.open(io.BytesIO(file))
+        image_array = np.array(image_data.convert("RGB"))
+
+        with uploaded_images_lock:
+            image_id = len(uploaded_images)
+            uploaded_images.append(image_array)
+
+        return {"code": 0, "data": image_id}
 
     uvicorn.run(app, host=host, port=port)
 
