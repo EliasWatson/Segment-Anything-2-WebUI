@@ -16,7 +16,8 @@ from typing_extensions import Annotated
 host = "127.0.0.1"
 port = 8000
 
-checkpoint_dir = Path("backend/checkpoints")
+backend_root = Path(__file__).parent.parent.absolute()
+checkpoint_dir = backend_root / "segment-anything-2" / "checkpoints"
 sam2_checkpoint = checkpoint_dir / "sam2_hiera_base_plus.pt"
 model_cfg = "sam2_hiera_b+.yaml"
 
