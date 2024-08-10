@@ -155,6 +155,10 @@ function App(): ReactNode {
                           top: `${((y - 4) / imageElement.naturalHeight) * 100}%`,
                           left: `${((x - 4) / imageElement.naturalWidth) * 100}%`,
                         }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedPoint(i);
+                        }}
                       />
                     ))}
                   </>
