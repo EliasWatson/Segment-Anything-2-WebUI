@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import uvicorn
 from fastapi import FastAPI, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 from pydantic import BaseModel
 from sam2.build_sam import build_sam2
@@ -60,6 +61,15 @@ def main():
                 predictor.set_image(uploaded_images[image_id])
 
     app = FastAPI()
+
+    origins = ["*"]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     @app.post("/api/image/upload")
     async def api_image_upload(file: Annotated[bytes, File()]) -> int:
