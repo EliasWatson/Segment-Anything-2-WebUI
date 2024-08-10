@@ -1,13 +1,30 @@
 import { AppShell, Text, Group, rem, Image, Flex } from "@mantine/core";
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 import { Dropzone, FileWithPath, IMAGE_MIME_TYPE } from "@mantine/dropzone";
 import { IconPhoto, IconUpload, IconX } from "@tabler/icons-react";
+import { useImageUpload } from "./queries/use-image-upload.ts";
 
 function App(): ReactNode {
-  const [image, setImage] = useState<FileWithPath | undefined>(undefined);
-  const imageUrl = useMemo(
-    () => (image ? URL.createObjectURL(image) : undefined),
-    [image],
+  const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
+
+  const { data: imageIdResponse, mutate: uploadImage } = useImageUpload();
+  const imageId = imageIdResponse?.data;
+
+  const setImage = useCallback(
+    (image: FileWithPath | undefined) => {
+      if (imageUrl !== undefined) {
+        URL.revokeObjectURL(imageUrl);
+      }
+
+      if (image === undefined) {
+        setImageUrl(undefined);
+        return;
+      }
+
+      uploadImage(image);
+      setImageUrl(URL.createObjectURL(image));
+    },
+    [imageUrl, uploadImage],
   );
 
   return (
@@ -62,6 +79,7 @@ function App(): ReactNode {
               </div>
             </Group>
           </Dropzone>
+          <div>{imageId}</div>
           {imageUrl && <Image src={imageUrl} />}
         </Flex>
       </AppShell.Main>

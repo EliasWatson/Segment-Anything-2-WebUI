@@ -80,6 +80,8 @@ def main():
             image_id = len(uploaded_images)
             uploaded_images.append(image_array)
 
+        print(f"Image {image_id} uploaded with resolution {image_data.width}x{image_data.height}")
+
         return image_id
 
     @app.post("/api/image/segment/{image_id}")
