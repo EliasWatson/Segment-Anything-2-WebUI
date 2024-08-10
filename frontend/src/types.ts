@@ -4,10 +4,6 @@ export type HintPoint = {
 };
 
 export type Hints = {
+  previous_mask_id: number | undefined;
   points: HintPoint[];
-};
-
-export type SegmentResult = {
-  mask: number[][];
-  score: number;
 };

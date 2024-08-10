@@ -1,12 +1,14 @@
 import io
 from pathlib import Path
 from threading import Lock
+from dataclasses import dataclass
 
 import numpy as np
 import torch
 import uvicorn
 from fastapi import FastAPI, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from PIL import Image
 from pydantic import BaseModel
 from sam2.build_sam import build_sam2
@@ -28,12 +30,28 @@ class SegmentHintPoint(BaseModel):
 
 
 class SegmentHints(BaseModel):
+    previous_mask_id: int | None
     points: list[SegmentHintPoint]
 
 
-class SegmentResult(BaseModel):
-    mask: list[list[float]]
+@dataclass
+class SavedMask:
+    input_points: np.ndarray
+    input_labels: np.ndarray
+    mask: np.ndarray
     score: float
+    logit: np.ndarray
+
+
+class UploadedImage:
+    def __init__(self, pixels: np.ndarray):
+        self.pixels = pixels
+        self.masks: list[SavedMask] = []
+
+    def add_mask(self, mask: SavedMask) -> int:
+        mask_id = len(self.masks)
+        self.masks.append(mask)
+        return mask_id
 
 
 def main():
@@ -49,17 +67,23 @@ def main():
     currently_loaded_image_id: int = -1
     sam2_model_lock = Lock()
 
-    uploaded_images: list[np.ndarray] = []
+    uploaded_images: list[UploadedImage] = []
     uploaded_images_lock = Lock()
 
     # Make sure you have the model lock before calling this
-    def load_image(image_id: int):
-        if currently_loaded_image_id != image_id:
-            with uploaded_images_lock:
-                if image_id < 0 or image_id >= len(uploaded_images):
-                    raise HTTPException(status_code=404, detail="Image not found")
+    def load_image(image_id: int, mask_id: int | None) -> np.ndarray | None:
+        with uploaded_images_lock:
+            if image_id < 0 or image_id >= len(uploaded_images):
+                raise HTTPException(status_code=404, detail="Image not found")
 
-                predictor.set_image(uploaded_images[image_id])
+            if currently_loaded_image_id != image_id:
+                predictor.set_image(uploaded_images[image_id].pixels)
+
+            return (
+                uploaded_images[image_id].masks[mask_id].logit
+                if mask_id is not None
+                else None
+            )
 
     app = FastAPI()
 
@@ -79,31 +103,73 @@ def main():
 
         with uploaded_images_lock:
             image_id = len(uploaded_images)
-            uploaded_images.append(image_array)
+            uploaded_images.append(UploadedImage(image_array))
 
-        print(f"Image {image_id} uploaded with resolution {image_data.width}x{image_data.height}")
+        print(
+            f"Image {image_id} uploaded with resolution {image_data.width}x{image_data.height}"
+        )
 
         return image_id
 
     @app.post("/api/image/segment/{image_id}")
-    async def api_image_segment(image_id: int, hints: SegmentHints) -> SegmentResult:
+    async def api_image_segment(image_id: int, hints: SegmentHints) -> list[int]:
         input_points = np.array([[point.x, point.y] for point in hints.points])
         input_labels = np.array([1 for _ in hints.points])
 
         with sam2_model_lock:
-            load_image(image_id)
+            logit = load_image(image_id, hints.previous_mask_id)
             masks, scores, logits = predictor.predict(
                 point_coords=input_points,
                 point_labels=input_labels,
-                multimask_output=True,
+                mask_inputs=(logit[None, :, :] if logit is not None else None),
+                multimask_output=(logit is None),
             )
 
-        sorted_ind = np.argsort(scores)[::-1]
-        masks = masks[sorted_ind]
-        scores = scores[sorted_ind]
-        logits = logits[sorted_ind]
+            sorted_ind = np.argsort(scores)[::-1]
+            masks = masks[sorted_ind]
+            scores = scores[sorted_ind]
+            logits = logits[sorted_ind]
 
-        return {"mask": masks[0].tolist(), "score": scores[0]}
+            with uploaded_images_lock:
+                uploaded_image = uploaded_images[image_id]
+                mask_ids: list[int] = [
+                    uploaded_image.add_mask(
+                        SavedMask(
+                            input_points=input_points.copy(),
+                            input_labels=input_labels.copy(),
+                            mask=masks[i],
+                            score=scores[i],
+                            logit=logits[i],
+                        )
+                    )
+                    for i in range(masks.shape[0])
+                ]
+
+        return mask_ids
+
+    @app.get(
+        "/api/image/get_mask/{image_id}/{mask_id}",
+        responses={200: {"content": {"image/png": {}}}},
+        response_class=Response,
+    )
+    async def api_image_get_mask(image_id: int, mask_id: int):
+        with uploaded_images_lock:
+            if image_id < 0 or image_id >= len(uploaded_images):
+                raise HTTPException(status_code=404, detail="Image not found")
+
+            uploaded_image = uploaded_images[image_id]
+
+            if mask_id < 0 or mask_id >= len(uploaded_image.masks):
+                raise HTTPException(status_code=404, detail="Mask not found")
+
+            saved_mask = uploaded_image.masks[mask_id]
+            mask_image = Image.fromarray((saved_mask.mask * 255).astype(np.uint8))
+
+        buffer = io.BytesIO()
+        mask_image.save(buffer, format="PNG")
+        png_bytes = buffer.getvalue()
+
+        return Response(content=png_bytes, media_type="image/png")
 
     uvicorn.run(app, host=host, port=port)
 
