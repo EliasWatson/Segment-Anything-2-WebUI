@@ -132,12 +132,20 @@ def main():
 
         with sam2_model_lock:
             logit = load_image(image_id, hints.previous_mask_id)
-            masks, scores, logits = predictor.predict(
-                point_coords=input_points,
-                point_labels=input_labels,
-                mask_inputs=(logit[None, :, :] if logit is not None else None),
-                multimask_output=(logit is None),
-            )
+
+            if logit is None:
+                masks, scores, logits = predictor.predict(
+                    point_coords=input_points,
+                    point_labels=input_labels,
+                    multimask_output=True,
+                )
+            else:
+                masks, scores, logits = predictor.predict(
+                    point_coords=input_points,
+                    point_labels=input_labels,
+                    mask_input=logit[None, :, :],
+                    multimask_output=False,
+                )
 
             sorted_ind = np.argsort(scores)[::-1]
             masks = masks[sorted_ind]
