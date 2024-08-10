@@ -19,6 +19,7 @@ import { useImageUpload } from "./queries/use-image-upload.ts";
 import { HintPoint } from "./types.ts";
 import { useImageSegment } from "./queries/use-image-segment.ts";
 import { apiUrl } from "./queries/util.ts";
+import { clsx } from "clsx";
 
 function App(): ReactNode {
   const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
@@ -154,7 +155,10 @@ function App(): ReactNode {
                     {hintPoints.map(({ x, y }, i) => (
                       <div
                         key={i}
-                        className="absolute w-2 h-2 bg-blue-500 border border-white rounded-full drop-shadow cursor-pointer"
+                        className={clsx(
+                          "absolute w-2 h-2 border border-white rounded-full drop-shadow cursor-pointer",
+                          i === selectedPoint ? "bg-red-500" : "bg-blue-500",
+                        )}
                         style={{
                           top: `${((y - 4) / imageElement.naturalHeight) * 100}%`,
                           left: `${((x - 4) / imageElement.naturalWidth) * 100}%`,
