@@ -1,19 +1,24 @@
 import { AppShell, Text, Group, rem, Image, Flex } from "@mantine/core";
-import { type ReactNode, useCallback, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Dropzone, FileWithPath, IMAGE_MIME_TYPE } from "@mantine/dropzone";
 import { IconPhoto, IconUpload, IconX } from "@tabler/icons-react";
 import { useImageUpload } from "./queries/use-image-upload.ts";
 import { HintPoint } from "./types.ts";
 import { useImageSegment } from "./queries/use-image-segment.ts";
+import { apiUrl } from "./queries/util.ts";
 
 function App(): ReactNode {
   const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
 
   const imageRef = useRef<HTMLImageElement | null>(null);
   const imageElement = imageRef.current;
-
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const canvas = canvasRef.current;
 
   const [hintPoints, setHintPoints] = useState<HintPoint[]>([]);
 
@@ -39,27 +44,24 @@ function App(): ReactNode {
     [imageUrl, uploadImage],
   );
 
-  const { data: segmentResultResp } = useImageSegment(imageId, hintPoints);
+  const { data: maskIdResponse, mutate: segmentImage } = useImageSegment();
 
-  if (canvas) {
-    const ctx = canvas.getContext("2d");
-    if (ctx) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "red";
-      ctx.globalAlpha = 0.25;
-
-      if (segmentResultResp) {
-        const { mask } = segmentResultResp.data;
-        mask.forEach((row, y) =>
-          row.forEach((maskValue, x) => {
-            if (maskValue > 0.0) {
-              ctx.fillRect(x, y, 1, 1);
-            }
-          }),
-        );
-      }
+  useEffect(() => {
+    if (imageId !== undefined && hintPoints.length > 0) {
+      segmentImage({ imageId, hintPoints });
     }
-  }
+  }, [hintPoints, imageId, segmentImage]);
+
+  const maskUrl = useMemo(() => {
+    if (imageId === undefined || maskIdResponse === undefined) {
+      return undefined;
+    }
+
+    const maskIds = maskIdResponse.data;
+    if (maskIds.length === 0) return undefined;
+
+    return `${apiUrl}/api/image/get_mask/${imageId}/${maskIds[0]}`;
+  }, [imageId, maskIdResponse]);
 
   return (
     <AppShell padding="md">
@@ -113,52 +115,45 @@ function App(): ReactNode {
               </div>
             </Group>
           </Dropzone>
-          {imageUrl && (
-            <div
-              className="relative"
-              onClick={(e) => {
-                if (imageElement === null) return;
+          <Flex>
+            {imageUrl && (
+              <div
+                className="relative"
+                onClick={(e) => {
+                  if (imageElement === null) return;
 
-                const rect = imageElement.getBoundingClientRect();
-                const x = Math.round(
-                  ((e.clientX - rect.left) / rect.width) *
-                    imageElement.naturalWidth,
-                );
-                const y = Math.round(
-                  ((e.clientY - rect.top) / rect.height) *
-                    imageElement.naturalHeight,
-                );
+                  const rect = imageElement.getBoundingClientRect();
+                  const x = Math.round(
+                    ((e.clientX - rect.left) / rect.width) *
+                      imageElement.naturalWidth,
+                  );
+                  const y = Math.round(
+                    ((e.clientY - rect.top) / rect.height) *
+                      imageElement.naturalHeight,
+                  );
 
-                setHintPoints((hintPoints) => [...hintPoints, { x, y }]);
-              }}
-            >
-              <Image ref={imageRef} src={imageUrl} />
-              {imageElement && (
-                <>
-                  <canvas
-                    ref={canvasRef}
-                    className="absolute left-0 top-0"
-                    width={imageElement.naturalWidth}
-                    height={imageElement.naturalHeight}
-                    style={{
-                      width: `${imageElement.width}px`,
-                      height: `${imageElement.height}px`,
-                    }}
-                  />
-                  {hintPoints.map(({ x, y }, i) => (
-                    <div
-                      key={i}
-                      className="absolute w-2 h-2 bg-blue-500 border border-white rounded-full drop-shadow cursor-pointer"
-                      style={{
-                        top: `${((y - 4) / imageElement.naturalHeight) * 100}%`,
-                        left: `${((x - 4) / imageElement.naturalWidth) * 100}%`,
-                      }}
-                    />
-                  ))}
-                </>
-              )}
-            </div>
-          )}
+                  setHintPoints((hintPoints) => [...hintPoints, { x, y }]);
+                }}
+              >
+                <Image ref={imageRef} src={imageUrl} />
+                {imageElement && (
+                  <>
+                    {hintPoints.map(({ x, y }, i) => (
+                      <div
+                        key={i}
+                        className="absolute w-2 h-2 bg-blue-500 border border-white rounded-full drop-shadow cursor-pointer"
+                        style={{
+                          top: `${((y - 4) / imageElement.naturalHeight) * 100}%`,
+                          left: `${((x - 4) / imageElement.naturalWidth) * 100}%`,
+                        }}
+                      />
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
+            {maskUrl !== undefined && <Image src={maskUrl} />}
+          </Flex>
         </Flex>
       </AppShell.Main>
     </AppShell>
