@@ -1,4 +1,13 @@
-import { AppShell, Text, Group, rem, Image, Flex } from "@mantine/core";
+import {
+  AppShell,
+  Text,
+  Group,
+  rem,
+  Image,
+  Flex,
+  ScrollArea,
+  NavLink,
+} from "@mantine/core";
 import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
 import { Dropzone, FileWithPath, IMAGE_MIME_TYPE } from "@mantine/dropzone";
 import { IconPhoto, IconUpload, IconX } from "@tabler/icons-react";
@@ -14,6 +23,9 @@ function App(): ReactNode {
   const imageElement = imageRef.current;
 
   const [hintPoints, setHintPoints] = useState<HintPoint[]>([]);
+  const [selectedPoint, setSelectedPoint] = useState<number | undefined>(
+    undefined,
+  );
 
   const { data: imageIdResponse, mutate: uploadImage } = useImageUpload();
   const imageId = imageIdResponse?.data;
@@ -119,6 +131,7 @@ function App(): ReactNode {
 
                   const newHintPoints = [...hintPoints, { x, y }];
                   setHintPoints(newHintPoints);
+                  setSelectedPoint(newHintPoints.length - 1);
 
                   if (imageId !== undefined) {
                     segmentImage({
@@ -150,6 +163,22 @@ function App(): ReactNode {
             )}
             {maskUrl !== undefined && <Image src={maskUrl} />}
           </Flex>
+          <Group>
+            <ScrollArea w="150" h="250">
+              <Flex direction="column">
+                {hintPoints.map((_point, i) => (
+                  <NavLink
+                    key={i}
+                    active={i === selectedPoint}
+                    label={`Point ${i + 1}`}
+                    onClick={() => {
+                      setSelectedPoint(i);
+                    }}
+                  />
+                ))}
+              </Flex>
+            </ScrollArea>
+          </Group>
         </Flex>
       </AppShell.Main>
     </AppShell>
