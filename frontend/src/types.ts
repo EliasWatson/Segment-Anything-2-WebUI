@@ -6,3 +6,8 @@ export type HintPoint = {
 export type Hints = {
   points: HintPoint[];
 };
+
+export type SegmentResult = {
+  mask: number[][];
+  score: number;
+};

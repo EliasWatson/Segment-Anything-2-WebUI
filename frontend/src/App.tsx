@@ -12,6 +12,9 @@ function App(): ReactNode {
   const imageRef = useRef<HTMLImageElement | null>(null);
   const imageElement = imageRef.current;
 
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvas = canvasRef.current;
+
   const [hintPoints, setHintPoints] = useState<HintPoint[]>([]);
 
   const { data: imageIdResponse, mutate: uploadImage } = useImageUpload();
@@ -36,7 +39,27 @@ function App(): ReactNode {
     [imageUrl, uploadImage],
   );
 
-  const segmentResult = useImageSegment(imageId, hintPoints);
+  const { data: segmentResultResp } = useImageSegment(imageId, hintPoints);
+
+  if (canvas) {
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "red";
+      ctx.globalAlpha = 0.25;
+
+      if (segmentResultResp) {
+        const { mask } = segmentResultResp.data;
+        mask.forEach((row, y) =>
+          row.forEach((maskValue, x) => {
+            if (maskValue > 0.0) {
+              ctx.fillRect(x, y, 1, 1);
+            }
+          }),
+        );
+      }
+    }
+  }
 
   return (
     <AppShell padding="md">
@@ -91,32 +114,41 @@ function App(): ReactNode {
             </Group>
           </Dropzone>
           {imageUrl && (
-            <div className="relative">
-              <Image
-                ref={imageRef}
-                src={imageUrl}
-                onClick={(e) => {
-                  if (imageElement === null) return;
+            <div
+              className="relative"
+              onClick={(e) => {
+                if (imageElement === null) return;
 
-                  const rect = imageElement.getBoundingClientRect();
-                  const x = Math.round(
-                    ((e.clientX - rect.left) / rect.width) *
-                      imageElement.naturalWidth,
-                  );
-                  const y = Math.round(
-                    ((e.clientY - rect.top) / rect.height) *
-                      imageElement.naturalHeight,
-                  );
+                const rect = imageElement.getBoundingClientRect();
+                const x = Math.round(
+                  ((e.clientX - rect.left) / rect.width) *
+                    imageElement.naturalWidth,
+                );
+                const y = Math.round(
+                  ((e.clientY - rect.top) / rect.height) *
+                    imageElement.naturalHeight,
+                );
 
-                  setHintPoints((hintPoints) => [...hintPoints, { x, y }]);
-                }}
-              />
+                setHintPoints((hintPoints) => [...hintPoints, { x, y }]);
+              }}
+            >
+              <Image ref={imageRef} src={imageUrl} />
               {imageElement && (
                 <>
+                  <canvas
+                    ref={canvasRef}
+                    className="absolute left-0 top-0"
+                    width={imageElement.naturalWidth}
+                    height={imageElement.naturalHeight}
+                    style={{
+                      width: `${imageElement.width}px`,
+                      height: `${imageElement.height}px`,
+                    }}
+                  />
                   {hintPoints.map(({ x, y }, i) => (
                     <div
                       key={i}
-                      className="absolute w-2 h-2 bg-red-500 border border-white rounded-full drop-shadow cursor-pointer"
+                      className="absolute w-2 h-2 bg-blue-500 border border-white rounded-full drop-shadow cursor-pointer"
                       style={{
                         top: `${((y - 4) / imageElement.naturalHeight) * 100}%`,
                         left: `${((x - 4) / imageElement.naturalWidth) * 100}%`,
