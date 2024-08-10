@@ -54,15 +54,29 @@ class UploadedImage:
         return mask_id
 
 
+def get_torch_device() -> str:
+    device = "cpu"
+    if torch.backends.mps.is_available():
+        device = "mps"
+    if torch.cuda.is_available():
+        device = "cuda"
+
+    print(f"Torch device: {device}")
+    return device
+
+
 def main():
-    torch.autocast(device_type="cuda", dtype=torch.bfloat16).__enter__()
+    device = get_torch_device()
 
-    if torch.cuda.get_device_properties(0).major >= 8:
-        # turn on tfloat32 for Ampere GPUs (https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices)
-        torch.backends.cuda.matmul.allow_tf32 = True
-        torch.backends.cudnn.allow_tf32 = True
+    if device == "cuda":
+        torch.autocast(device_type="cuda", dtype=torch.bfloat16).__enter__()
 
-    sam2_model = build_sam2(model_cfg, sam2_checkpoint, device="cuda")
+        if torch.cuda.get_device_properties(0).major >= 8:
+            # turn on tfloat32 for Ampere GPUs (https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices)
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.backends.cudnn.allow_tf32 = True
+
+    sam2_model = build_sam2(model_cfg, sam2_checkpoint, device=device)
     predictor = SAM2ImagePredictor(sam2_model)
     currently_loaded_image_id: int = -1
     sam2_model_lock = Lock()
