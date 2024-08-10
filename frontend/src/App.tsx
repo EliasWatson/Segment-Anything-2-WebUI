@@ -7,6 +7,9 @@ import {
   Flex,
   ScrollArea,
   NavLink,
+  Paper,
+  NumberInput,
+  Stack,
 } from "@mantine/core";
 import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
 import { Dropzone, FileWithPath, IMAGE_MIME_TYPE } from "@mantine/dropzone";
@@ -167,22 +170,64 @@ function App(): ReactNode {
             )}
             {maskUrl !== undefined && <Image src={maskUrl} />}
           </Flex>
-          <Group>
-            <ScrollArea w="150" h="250">
-              <Flex direction="column">
-                {hintPoints.map((_point, i) => (
-                  <NavLink
-                    key={i}
-                    active={i === selectedPoint}
-                    label={`Point ${i + 1}`}
-                    onClick={() => {
-                      setSelectedPoint(i);
-                    }}
-                  />
-                ))}
-              </Flex>
-            </ScrollArea>
-          </Group>
+          <Paper shadow="md">
+            <Group align="start">
+              <ScrollArea w="150" h="250" className="border-r">
+                <Flex direction="column">
+                  {hintPoints.map((_point, i) => (
+                    <NavLink
+                      key={i}
+                      active={i === selectedPoint}
+                      label={`Point ${i + 1}`}
+                      onClick={() => {
+                        setSelectedPoint(i);
+                      }}
+                    />
+                  ))}
+                </Flex>
+              </ScrollArea>
+              {selectedPoint !== undefined && (
+                <Stack>
+                  <Group>
+                    <NumberInput
+                      label="X"
+                      value={hintPoints[selectedPoint].x}
+                      onChange={(value) => {
+                        setHintPoints((hintPoints) => {
+                          const newHintPoints = [...hintPoints];
+                          newHintPoints[selectedPoint] = {
+                            ...newHintPoints[selectedPoint],
+                            x:
+                              typeof value === "string"
+                                ? parseInt(value)
+                                : value,
+                          };
+                          return newHintPoints;
+                        });
+                      }}
+                    />
+                    <NumberInput
+                      label="Y"
+                      value={hintPoints[selectedPoint].y}
+                      onChange={(value) => {
+                        setHintPoints((hintPoints) => {
+                          const newHintPoints = [...hintPoints];
+                          newHintPoints[selectedPoint] = {
+                            ...newHintPoints[selectedPoint],
+                            y:
+                              typeof value === "string"
+                                ? parseInt(value)
+                                : value,
+                          };
+                          return newHintPoints;
+                        });
+                      }}
+                    />
+                  </Group>
+                </Stack>
+              )}
+            </Group>
+          </Paper>
         </Flex>
       </AppShell.Main>
     </AppShell>
