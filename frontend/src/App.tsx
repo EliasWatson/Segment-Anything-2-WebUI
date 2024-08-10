@@ -10,6 +10,7 @@ import {
   Paper,
   NumberInput,
   Stack,
+  Button,
 } from "@mantine/core";
 import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
 import { Dropzone, FileWithPath, IMAGE_MIME_TYPE } from "@mantine/dropzone";
@@ -66,7 +67,7 @@ function App(): ReactNode {
   return (
     <AppShell padding="md">
       <AppShell.Main>
-        <Flex direction="column" gap="md">
+        <Flex direction="column" gap="md" align="start">
           <Dropzone
             onDrop={(files) => setImage(files.at(0))}
             accept={IMAGE_MIME_TYPE}
@@ -170,7 +171,7 @@ function App(): ReactNode {
             )}
             {maskUrl !== undefined && <Image src={maskUrl} />}
           </Flex>
-          <Paper shadow="md">
+          <Paper shadow="md" pr="md">
             <Group align="start">
               <ScrollArea w="150" h="250" className="border-r">
                 <Flex direction="column">
@@ -224,6 +225,19 @@ function App(): ReactNode {
                       }}
                     />
                   </Group>
+                  <Button
+                    color="red"
+                    onClick={() => {
+                      setHintPoints((hintPoints) => {
+                        const newHintPoints = [...hintPoints];
+                        newHintPoints.splice(selectedPoint, 1);
+                        return newHintPoints;
+                      });
+                      setSelectedPoint(undefined);
+                    }}
+                  >
+                    Delete
+                  </Button>
                 </Stack>
               )}
             </Group>
