@@ -1,12 +1,5 @@
 import { AppShell, Text, Group, rem, Image, Flex } from "@mantine/core";
-import {
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
 import { Dropzone, FileWithPath, IMAGE_MIME_TYPE } from "@mantine/dropzone";
 import { IconPhoto, IconUpload, IconX } from "@tabler/icons-react";
 import { useImageUpload } from "./queries/use-image-upload.ts";
@@ -45,23 +38,15 @@ function App(): ReactNode {
   );
 
   const { data: maskIdResponse, mutate: segmentImage } = useImageSegment();
-
-  useEffect(() => {
-    if (imageId !== undefined && hintPoints.length > 0) {
-      segmentImage({ imageId, hintPoints });
-    }
-  }, [hintPoints, imageId, segmentImage]);
+  const maskId = maskIdResponse?.data.at(0);
 
   const maskUrl = useMemo(() => {
-    if (imageId === undefined || maskIdResponse === undefined) {
+    if (imageId === undefined || maskId === undefined) {
       return undefined;
     }
 
-    const maskIds = maskIdResponse.data;
-    if (maskIds.length === 0) return undefined;
-
-    return `${apiUrl}/api/image/get_mask/${imageId}/${maskIds[0]}`;
-  }, [imageId, maskIdResponse]);
+    return `${apiUrl}/api/image/get_mask/${imageId}/${maskId}`;
+  }, [imageId, maskId]);
 
   return (
     <AppShell padding="md">
@@ -132,7 +117,18 @@ function App(): ReactNode {
                       imageElement.naturalHeight,
                   );
 
-                  setHintPoints((hintPoints) => [...hintPoints, { x, y }]);
+                  const newHintPoints = [...hintPoints, { x, y }];
+                  setHintPoints(newHintPoints);
+
+                  if (imageId !== undefined) {
+                    segmentImage({
+                      imageId,
+                      hints: {
+                        previous_mask_id: maskId ?? null,
+                        points: newHintPoints,
+                      },
+                    });
+                  }
                 }}
               >
                 <Image ref={imageRef} src={imageUrl} />
