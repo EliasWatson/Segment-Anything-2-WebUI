@@ -1,11 +1,16 @@
 import { AppShell, Text, Group, rem, Image, Flex } from "@mantine/core";
-import { type ReactNode, useCallback, useState } from "react";
+import { type ReactNode, useCallback, useRef, useState } from "react";
 import { Dropzone, FileWithPath, IMAGE_MIME_TYPE } from "@mantine/dropzone";
 import { IconPhoto, IconUpload, IconX } from "@tabler/icons-react";
 import { useImageUpload } from "./queries/use-image-upload.ts";
 
 function App(): ReactNode {
   const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
+
+  const imageRef = useRef<HTMLImageElement | null>(null);
+  const imageElement = imageRef.current;
+
+  const [hintPoints, setHintPoints] = useState<[number, number][]>([]);
 
   const { data: imageIdResponse, mutate: uploadImage } = useImageUpload();
   const imageId = imageIdResponse?.data;
@@ -15,6 +20,8 @@ function App(): ReactNode {
       if (imageUrl !== undefined) {
         URL.revokeObjectURL(imageUrl);
       }
+
+      setHintPoints([]);
 
       if (image === undefined) {
         setImageUrl(undefined);
@@ -79,8 +86,43 @@ function App(): ReactNode {
               </div>
             </Group>
           </Dropzone>
-          <div>{imageId}</div>
-          {imageUrl && <Image src={imageUrl} />}
+          {imageUrl && (
+            <div className="relative">
+              <Image
+                ref={imageRef}
+                src={imageUrl}
+                onClick={(e) => {
+                  if (imageElement === null) return;
+
+                  const rect = imageElement.getBoundingClientRect();
+                  const x = Math.round(
+                    ((e.clientX - rect.left) / rect.width) *
+                      imageElement.naturalWidth,
+                  );
+                  const y = Math.round(
+                    ((e.clientY - rect.top) / rect.height) *
+                      imageElement.naturalHeight,
+                  );
+
+                  setHintPoints([...hintPoints, [x, y]]);
+                }}
+              />
+              {imageElement && (
+                <>
+                  {hintPoints.map(([x, y], i) => (
+                    <div
+                      key={i}
+                      className="absolute w-2 h-2 bg-red-500 border border-white rounded-full drop-shadow cursor-pointer"
+                      style={{
+                        top: `${((y - 4) / imageElement.naturalHeight) * 100}%`,
+                        left: `${((x - 4) / imageElement.naturalWidth) * 100}%`,
+                      }}
+                    />
+                  ))}
+                </>
+              )}
+            </div>
+          )}
         </Flex>
       </AppShell.Main>
     </AppShell>
