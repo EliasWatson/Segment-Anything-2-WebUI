@@ -3,6 +3,8 @@ import { type ReactNode, useCallback, useRef, useState } from "react";
 import { Dropzone, FileWithPath, IMAGE_MIME_TYPE } from "@mantine/dropzone";
 import { IconPhoto, IconUpload, IconX } from "@tabler/icons-react";
 import { useImageUpload } from "./queries/use-image-upload.ts";
+import { HintPoint } from "./types.ts";
+import { useImageSegment } from "./queries/use-image-segment.ts";
 
 function App(): ReactNode {
   const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
@@ -10,7 +12,7 @@ function App(): ReactNode {
   const imageRef = useRef<HTMLImageElement | null>(null);
   const imageElement = imageRef.current;
 
-  const [hintPoints, setHintPoints] = useState<[number, number][]>([]);
+  const [hintPoints, setHintPoints] = useState<HintPoint[]>([]);
 
   const { data: imageIdResponse, mutate: uploadImage } = useImageUpload();
   const imageId = imageIdResponse?.data;
@@ -33,6 +35,8 @@ function App(): ReactNode {
     },
     [imageUrl, uploadImage],
   );
+
+  const segmentResult = useImageSegment(imageId, hintPoints);
 
   return (
     <AppShell padding="md">
@@ -104,12 +108,12 @@ function App(): ReactNode {
                       imageElement.naturalHeight,
                   );
 
-                  setHintPoints([...hintPoints, [x, y]]);
+                  setHintPoints((hintPoints) => [...hintPoints, { x, y }]);
                 }}
               />
               {imageElement && (
                 <>
-                  {hintPoints.map(([x, y], i) => (
+                  {hintPoints.map(({ x, y }, i) => (
                     <div
                       key={i}
                       className="absolute w-2 h-2 bg-red-500 border border-white rounded-full drop-shadow cursor-pointer"

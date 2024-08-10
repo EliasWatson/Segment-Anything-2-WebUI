@@ -87,7 +87,7 @@ def main():
     @app.post("/api/image/segment/{image_id}")
     async def api_image_segment(image_id: int, hints: SegmentHints) -> SegmentResult:
         input_points = np.array([[point.x, point.y] for point in hints.points])
-        input_labels = np.array([1])
+        input_labels = np.array([1 for _ in hints.points])
 
         with sam2_model_lock:
             load_image(image_id)
