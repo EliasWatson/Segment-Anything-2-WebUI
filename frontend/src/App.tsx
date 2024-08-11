@@ -22,7 +22,13 @@ function App(): ReactNode {
     if (imageUrl === undefined) return;
 
     new THREE.TextureLoader().loadAsync(imageUrl).then((texture) => {
-      setImageTexture(texture);
+      setImageTexture((oldTexture) => {
+        if (oldTexture !== undefined) {
+          oldTexture.dispose();
+        }
+
+        return texture;
+      });
     });
   }, [imageUrl]);
 
