@@ -13,17 +13,20 @@
     "@mantine/core": "^7.12.0",
     "@mantine/dropzone": "^7.12.0",
     "@mantine/hooks": "^7.12.0",
+    "@react-three/fiber": "^8.17.5",
     "@tabler/icons-react": "^3.12.0",
     "@tanstack/react-query": "^5.51.23",
     "axios": "^1.7.3",
     "clsx": "^2.1.1",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "three": "^0.167.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.8.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@types/three": "^0.167.1",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.8.0",
