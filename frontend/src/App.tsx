@@ -9,6 +9,7 @@ import { Canvas } from "@react-three/fiber";
 import * as THREE from "three";
 import { MapControls } from "@react-three/drei";
 import { useDropzone } from "react-dropzone";
+import { ImagePlaceholder } from "./components/ImagePlaceholder.tsx";
 
 const initialCameraZoom = Math.min(window.innerWidth, window.innerHeight) * 0.8;
 
@@ -105,22 +106,26 @@ function App(): ReactNode {
   return (
     <div className="w-full h-full" {...getRootProps()}>
       <input {...getInputProps()} />
-      <Canvas
-        frameloop="demand"
-        orthographic
-        camera={{
-          position: [0, 0, 50],
-          zoom: initialCameraZoom,
-          up: [0, 0, 1],
-          far: 10000,
-        }}
-      >
-        <mesh>
-          <planeGeometry args={planeDimensions} />
-          {imageTexture && <meshBasicMaterial map={imageTexture} />}
-        </mesh>
-        <MapControls enableRotate={false} />
-      </Canvas>
+      {imageTexture === undefined ? (
+        <ImagePlaceholder />
+      ) : (
+        <Canvas
+          frameloop="demand"
+          orthographic
+          camera={{
+            position: [0, 0, 50],
+            zoom: initialCameraZoom,
+            up: [0, 0, 1],
+            far: 10000,
+          }}
+        >
+          <mesh>
+            <planeGeometry args={planeDimensions} />
+            <meshBasicMaterial map={imageTexture} />
+          </mesh>
+          <MapControls enableRotate={false} />
+        </Canvas>
+      )}
     </div>
   );
 }
