@@ -10,6 +10,7 @@ import * as THREE from "three";
 import { MapControls } from "@react-three/drei";
 import { useDropzone } from "react-dropzone";
 import { ImagePlaceholder } from "./components/ImagePlaceholder.tsx";
+import { HintPoint } from "./types.ts";
 
 const initialCameraZoom = Math.min(window.innerWidth, window.innerHeight) * 0.8;
 
@@ -33,10 +34,8 @@ function App(): ReactNode {
     });
   }, [imageUrl]);
 
-  // const imageRef = useRef<HTMLImageElement | null>(null);
-  // const imageElement = imageRef.current;
-  //
-  // const [hintPoints, setHintPoints] = useState<HintPoint[]>([]);
+  const [hintPoints, setHintPoints] = useState<HintPoint[]>([]);
+
   // const [selectedPoint, setSelectedPoint] = useState<number | undefined>(
   //   undefined,
   // );
@@ -119,10 +118,34 @@ function App(): ReactNode {
             far: 10000,
           }}
         >
-          <mesh>
+          <mesh
+            onClick={(e) => {
+              setHintPoints((hintPoints) => {
+                const uv = e.uv;
+                if (uv === undefined) return hintPoints;
+
+                return [...hintPoints, { x: uv.x, y: uv.y }];
+              });
+            }}
+          >
             <planeGeometry args={planeDimensions} />
             <meshBasicMaterial map={imageTexture} />
           </mesh>
+          {hintPoints.map(({ x, y }, i) => (
+            <mesh
+              key={i}
+              position={
+                new THREE.Vector3(
+                  (x - 0.5) * planeDimensions[0],
+                  (y - 0.5) * planeDimensions[1],
+                  1,
+                )
+              }
+            >
+              <planeGeometry args={[0.01, 0.01]} />
+              <meshBasicMaterial color={"white"} />
+            </mesh>
+          ))}
           <MapControls enableRotate={false} />
         </Canvas>
       )}
