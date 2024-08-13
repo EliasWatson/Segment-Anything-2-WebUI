@@ -35,11 +35,18 @@ function App(): ReactNode {
   }, [imageUrl]);
 
   const [hintPoints, setHintPoints] = useState<HintPoint[]>([]);
+  const [selectedPoint, setSelectedPoint] = useState<number | undefined>(
+    undefined,
+  );
 
-  // const [selectedPoint, setSelectedPoint] = useState<number | undefined>(
-  //   undefined,
-  // );
-  //
+  const addHintPoint = useCallback(
+    (x: number, y: number): void => {
+      setSelectedPoint(hintPoints.length);
+      setHintPoints((hintPoints) => [...hintPoints, { x, y }]);
+    },
+    [hintPoints.length],
+  );
+
   // const { data: imageIdResponse, mutate: uploadImage } = useImageUpload();
   // const imageId = imageIdResponse?.data;
   //
@@ -120,12 +127,11 @@ function App(): ReactNode {
         >
           <mesh
             onClick={(e) => {
-              setHintPoints((hintPoints) => {
-                const uv = e.uv;
-                if (uv === undefined) return hintPoints;
+              const uv = e.uv;
+              if (uv === undefined) return;
 
-                return [...hintPoints, { x: uv.x, y: uv.y }];
-              });
+              e.stopPropagation();
+              addHintPoint(uv.x, uv.y);
             }}
           >
             <planeGeometry args={planeDimensions} />
@@ -138,12 +144,20 @@ function App(): ReactNode {
                 new THREE.Vector3(
                   (x - 0.5) * planeDimensions[0],
                   (y - 0.5) * planeDimensions[1],
-                  1,
+                  1 + (i / hintPoints.length) * 0.1,
                 )
               }
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedPoint(i);
+              }}
             >
-              <planeGeometry args={[0.01, 0.01]} />
-              <meshBasicMaterial color={"white"} />
+              <planeGeometry
+                args={i === selectedPoint ? [0.008, 0.008] : [0.004, 0.004]}
+              />
+              <meshBasicMaterial
+                color={i === selectedPoint ? "orange" : "white"}
+              />
             </mesh>
           ))}
           <MapControls enableRotate={false} />
