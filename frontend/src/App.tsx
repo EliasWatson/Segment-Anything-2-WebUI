@@ -12,6 +12,7 @@ import { useDropzone } from "react-dropzone";
 import * as THREE from "three";
 
 import { ImagePlaceholder } from "./components/ImagePlaceholder.tsx";
+import { useImageUpload } from "./queries/use-image-upload.ts";
 import { HintPoint } from "./types.ts";
 
 const localforageImageKey = "uploaded-image";
@@ -24,31 +25,39 @@ function App(): ReactNode {
     undefined,
   );
 
-  const setImage = useCallback((imageBlob: Blob): void => {
-    const newImageUrl = URL.createObjectURL(imageBlob);
+  const { data: imageIdResponse, mutate: uploadImage } = useImageUpload();
+  const imageId = imageIdResponse?.data;
 
-    setImageUrl((imageUrl) => {
-      if (imageUrl !== undefined) {
-        URL.revokeObjectURL(imageUrl);
-      }
+  const setImage = useCallback(
+    (imageBlob: Blob): void => {
+      const newImageUrl = URL.createObjectURL(imageBlob);
 
-      return newImageUrl;
-    });
-
-    new THREE.TextureLoader().loadAsync(newImageUrl).then((texture) => {
-      setImageTexture((oldTexture) => {
-        if (oldTexture !== undefined) {
-          oldTexture.dispose();
+      setImageUrl((imageUrl) => {
+        if (imageUrl !== undefined) {
+          URL.revokeObjectURL(imageUrl);
         }
 
-        return texture;
+        return newImageUrl;
       });
-    });
 
-    localforage
-      .setItem(localforageImageKey, imageBlob)
-      .catch((e) => console.warn(e));
-  }, []);
+      new THREE.TextureLoader().loadAsync(newImageUrl).then((texture) => {
+        setImageTexture((oldTexture) => {
+          if (oldTexture !== undefined) {
+            oldTexture.dispose();
+          }
+
+          return texture;
+        });
+      });
+
+      uploadImage(imageBlob);
+
+      localforage
+        .setItem(localforageImageKey, imageBlob)
+        .catch((e) => console.warn(e));
+    },
+    [uploadImage],
+  );
 
   useEffect(() => {
     localforage.getItem(localforageImageKey).then((blob) => {
@@ -71,28 +80,6 @@ function App(): ReactNode {
     [hintPoints.length],
   );
 
-  // const { data: imageIdResponse, mutate: uploadImage } = useImageUpload();
-  // const imageId = imageIdResponse?.data;
-  //
-  // const setImage = useCallback(
-  //   (image: Blob | undefined) => {
-  //     if (imageUrl !== undefined) {
-  //       URL.revokeObjectURL(imageUrl);
-  //     }
-  //
-  //     setHintPoints([]);
-  //
-  //     if (image === undefined) {
-  //       setImageUrl(undefined);
-  //       return;
-  //     }
-  //
-  //     uploadImage(image);
-  //     setImageUrl(URL.createObjectURL(image));
-  //   },
-  //   [imageUrl, uploadImage],
-  // );
-  //
   // const { data: maskIdResponse, mutate: segmentImage } = useImageSegment();
   // const maskId = maskIdResponse?.data.at(0);
   //
