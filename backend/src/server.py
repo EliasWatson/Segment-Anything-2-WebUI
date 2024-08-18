@@ -25,8 +25,8 @@ model_cfg = "sam2_hiera_b+.yaml"
 
 
 class SegmentHintPoint(BaseModel):
-    x: int
-    y: int
+    x: float
+    y: float
 
 
 class SegmentHints(BaseModel):
@@ -85,18 +85,21 @@ def main():
     uploaded_images_lock = Lock()
 
     # Make sure you have the model lock before calling this
-    def load_image(image_id: int, mask_id: int | None) -> np.ndarray | None:
+    def load_image(
+        image_id: int, mask_id: int | None
+    ) -> tuple[np.ndarray | None, int, int]:
         with uploaded_images_lock:
             if image_id < 0 or image_id >= len(uploaded_images):
                 raise HTTPException(status_code=404, detail="Image not found")
 
+            image = uploaded_images[image_id]
             if currently_loaded_image_id != image_id:
-                predictor.set_image(uploaded_images[image_id].pixels)
+                predictor.set_image(image.pixels)
 
             return (
-                uploaded_images[image_id].masks[mask_id].logit
-                if mask_id is not None
-                else None
+                (image.masks[mask_id].logit if mask_id is not None else None),
+                image.pixels.shape[1],
+                image.pixels.shape[0],
             )
 
     app = FastAPI()
@@ -131,7 +134,10 @@ def main():
         input_labels = np.array([1 for _ in hints.points])
 
         with sam2_model_lock:
-            logit = load_image(image_id, hints.previous_mask_id)
+            logit, w, h = load_image(image_id, hints.previous_mask_id)
+
+            input_points[:, 0] *= w
+            input_points[:, 1] *= h
 
             if logit is None:
                 masks, scores, logits = predictor.predict(
