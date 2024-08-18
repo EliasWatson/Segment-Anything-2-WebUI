@@ -13,7 +13,9 @@ import { useDropzone } from "react-dropzone";
 import * as THREE from "three";
 
 import { ImagePlaceholder } from "./components/ImagePlaceholder.tsx";
+import { useImageSegment } from "./queries/use-image-segment.ts";
 import { useImageUpload } from "./queries/use-image-upload.ts";
+import { apiUrl } from "./queries/util.ts";
 import { HintPoint } from "./types.ts";
 
 const localforageImageKey = "uploaded-image";
@@ -79,24 +81,46 @@ function App(): ReactNode {
     didInitialLoadRef.current = true;
   }, [setImage]);
 
-  const addHintPoint = useCallback(
-    (x: number, y: number): void => {
-      setSelectedPoint(hintPoints.length);
-      setHintPoints((hintPoints) => [...hintPoints, { x, y }]);
-    },
-    [hintPoints.length],
+  const [maskTexture, setMaskTexture] = useState<THREE.Texture | undefined>(
+    undefined,
   );
 
-  // const { data: maskIdResponse, mutate: segmentImage } = useImageSegment();
-  // const maskId = maskIdResponse?.data.at(0);
-  //
-  // const maskUrl = useMemo(() => {
-  //   if (imageId === undefined || maskId === undefined) {
-  //     return undefined;
-  //   }
-  //
-  //   return `${apiUrl}/api/image/get_mask/${imageId}/${maskId}`;
-  // }, [imageId, maskId]);
+  const { data: maskIdResponse, mutate: segmentImage } = useImageSegment();
+  const maskId = maskIdResponse?.data.at(0);
+
+  useEffect(() => {
+    if (imageId === undefined || maskId === undefined) {
+      return;
+    }
+
+    const maskUrl = `${apiUrl}/api/image/get_mask/${imageId}/${maskId}`;
+    new THREE.TextureLoader().loadAsync(maskUrl).then((texture) => {
+      setMaskTexture((oldTexture) => {
+        if (oldTexture !== undefined) {
+          oldTexture.dispose();
+        }
+
+        return texture;
+      });
+    });
+  }, [imageId, maskId]);
+
+  const addHintPoint = useCallback(
+    (x: number, y: number): void => {
+      if (imageId === undefined) return;
+
+      const newHintPoints = [...hintPoints, { x, y }];
+
+      setSelectedPoint(hintPoints.length);
+      setHintPoints(newHintPoints);
+
+      segmentImage({
+        imageId,
+        hints: { previous_mask_id: maskId ?? null, points: newHintPoints },
+      });
+    },
+    [hintPoints, imageId, maskId, segmentImage],
+  );
 
   const planeDimensions = useMemo((): [number, number] => {
     if (imageTexture === undefined) {
@@ -152,6 +176,16 @@ function App(): ReactNode {
             <planeGeometry args={planeDimensions} />
             <meshBasicMaterial map={imageTexture} />
           </mesh>
+          {maskTexture !== undefined && (
+            <mesh position={new THREE.Vector3(0, 0, 0.5)}>
+              <planeGeometry args={planeDimensions} />
+              <meshBasicMaterial
+                transparent={true}
+                opacity={0.5}
+                alphaMap={maskTexture}
+              />
+            </mesh>
+          )}
           {hintPoints.map(({ x, y }, i) => (
             <mesh
               key={i}
