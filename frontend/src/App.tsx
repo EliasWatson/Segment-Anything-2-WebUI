@@ -6,6 +6,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useDropzone } from "react-dropzone";
@@ -59,12 +60,17 @@ function App(): ReactNode {
     [uploadImage],
   );
 
+  const didInitialLoadRef = useRef(false);
   useEffect(() => {
+    if (didInitialLoadRef.current) return;
+
     localforage.getItem(localforageImageKey).then((blob) => {
       if (blob instanceof Blob) {
         setImage(blob);
       }
     });
+
+    didInitialLoadRef.current = true;
   }, [setImage]);
 
   const [hintPoints, setHintPoints] = useState<HintPoint[]>([]);
