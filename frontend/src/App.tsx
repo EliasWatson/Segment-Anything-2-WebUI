@@ -16,6 +16,8 @@ import { ImagePlaceholder } from "./components/ImagePlaceholder.tsx";
 import { useImageSegment } from "./queries/use-image-segment.ts";
 import { useImageUpload } from "./queries/use-image-upload.ts";
 import { apiUrl } from "./queries/util.ts";
+import hintPointFragmentShader from "./shaders/hint-point/hint-point.frag?raw";
+import hintPointVertexShader from "./shaders/hint-point/hint-point.vert?raw";
 import { HintPoint } from "./types.ts";
 
 const localforageImageKey = "uploaded-image";
@@ -204,8 +206,10 @@ function App(): ReactNode {
               <planeGeometry
                 args={i === selectedPoint ? [0.008, 0.008] : [0.004, 0.004]}
               />
-              <meshBasicMaterial
-                color={i === selectedPoint ? "orange" : "white"}
+              <shaderMaterial
+                transparent={true}
+                vertexShader={hintPointVertexShader}
+                fragmentShader={hintPointFragmentShader}
               />
             </mesh>
           ))}
