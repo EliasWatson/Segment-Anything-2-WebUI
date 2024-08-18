@@ -1,8 +1,9 @@
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
-import { apiUrl } from "./util.ts";
-import { Hints } from "../types.ts";
 import { useCallback } from "react";
+
+import { Hints } from "../types.ts";
+import { apiUrl } from "./util.ts";
 
 export function useImageSegment() {
   return useMutation({

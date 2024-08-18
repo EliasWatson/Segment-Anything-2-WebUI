@@ -1,3 +1,6 @@
+import { MapControls } from "@react-three/drei";
+import { Canvas } from "@react-three/fiber";
+import * as localforage from "localforage";
 import {
   type ReactNode,
   useCallback,
@@ -5,13 +8,11 @@ import {
   useMemo,
   useState,
 } from "react";
-import { Canvas } from "@react-three/fiber";
-import * as THREE from "three";
-import { MapControls } from "@react-three/drei";
 import { useDropzone } from "react-dropzone";
+import * as THREE from "three";
+
 import { ImagePlaceholder } from "./components/ImagePlaceholder.tsx";
 import { HintPoint } from "./types.ts";
-import * as localforage from "localforage";
 
 const localforageImageKey = "uploaded-image";
 

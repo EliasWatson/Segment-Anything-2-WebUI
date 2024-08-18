@@ -1,5 +1,5 @@
-import { ReactNode } from "react";
 import { IconPhoto } from "@tabler/icons-react";
+import { ReactNode } from "react";
 
 export const ImagePlaceholder = (): ReactNode => {
   return (
