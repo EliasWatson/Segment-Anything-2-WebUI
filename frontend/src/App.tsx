@@ -29,10 +29,16 @@ function App(): ReactNode {
   const { data: imageIdResponse, mutate: uploadImage } = useImageUpload();
   const imageId = imageIdResponse?.data;
 
+  const [hintPoints, setHintPoints] = useState<HintPoint[]>([]);
+  const [selectedPoint, setSelectedPoint] = useState<number | undefined>(
+    undefined,
+  );
+
   const setImage = useCallback(
     (imageBlob: Blob): void => {
       const newImageUrl = URL.createObjectURL(imageBlob);
 
+      setHintPoints([]);
       setImageUrl((imageUrl) => {
         if (imageUrl !== undefined) {
           URL.revokeObjectURL(imageUrl);
@@ -72,11 +78,6 @@ function App(): ReactNode {
 
     didInitialLoadRef.current = true;
   }, [setImage]);
-
-  const [hintPoints, setHintPoints] = useState<HintPoint[]>([]);
-  const [selectedPoint, setSelectedPoint] = useState<number | undefined>(
-    undefined,
-  );
 
   const addHintPoint = useCallback(
     (x: number, y: number): void => {
