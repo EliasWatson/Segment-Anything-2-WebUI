@@ -18,6 +18,8 @@ import { useImageUpload } from "./queries/use-image-upload.ts";
 import { apiUrl } from "./queries/util.ts";
 import hintPointFragmentShader from "./shaders/hint-point/hint-point.frag?raw";
 import hintPointVertexShader from "./shaders/hint-point/hint-point.vert?raw";
+import maskFragmentShader from "./shaders/mask/mask.frag?raw";
+import maskVertexShader from "./shaders/mask/mask.vert?raw";
 import { HintPoint } from "./types.ts";
 
 const localforageImageKey = "uploaded-image";
@@ -86,6 +88,9 @@ function App(): ReactNode {
   const [maskTexture, setMaskTexture] = useState<THREE.Texture | undefined>(
     undefined,
   );
+
+  const maskShaderUniformsRef = useRef({ maskTexture: { value: maskTexture } });
+  maskShaderUniformsRef.current.maskTexture.value = maskTexture;
 
   const { data: maskIdResponse, mutate: segmentImage } = useImageSegment();
   const maskId = maskIdResponse?.data.at(0);
@@ -181,10 +186,11 @@ function App(): ReactNode {
           {maskTexture !== undefined && (
             <mesh position={new THREE.Vector3(0, 0, 0.5)}>
               <planeGeometry args={planeDimensions} />
-              <meshBasicMaterial
+              <shaderMaterial
                 transparent={true}
-                opacity={0.5}
-                alphaMap={maskTexture}
+                vertexShader={maskVertexShader}
+                fragmentShader={maskFragmentShader}
+                uniforms={maskShaderUniformsRef.current}
               />
             </mesh>
           )}
