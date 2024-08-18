@@ -11,19 +11,30 @@ import { MapControls } from "@react-three/drei";
 import { useDropzone } from "react-dropzone";
 import { ImagePlaceholder } from "./components/ImagePlaceholder.tsx";
 import { HintPoint } from "./types.ts";
+import * as localforage from "localforage";
 
-const initialCameraZoom = Math.min(window.innerWidth, window.innerHeight) * 0.8;
+const localforageImageKey = "uploaded-image";
+
+const initialCameraZoom = Math.min(window.innerWidth, window.innerHeight) * 0.9;
 
 function App(): ReactNode {
-  const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
+  const [, setImageUrl] = useState<string | undefined>(undefined);
   const [imageTexture, setImageTexture] = useState<THREE.Texture | undefined>(
     undefined,
   );
 
-  useEffect(() => {
-    if (imageUrl === undefined) return;
+  const setImage = useCallback((imageBlob: Blob): void => {
+    const newImageUrl = URL.createObjectURL(imageBlob);
 
-    new THREE.TextureLoader().loadAsync(imageUrl).then((texture) => {
+    setImageUrl((imageUrl) => {
+      if (imageUrl !== undefined) {
+        URL.revokeObjectURL(imageUrl);
+      }
+
+      return newImageUrl;
+    });
+
+    new THREE.TextureLoader().loadAsync(newImageUrl).then((texture) => {
       setImageTexture((oldTexture) => {
         if (oldTexture !== undefined) {
           oldTexture.dispose();
@@ -32,7 +43,19 @@ function App(): ReactNode {
         return texture;
       });
     });
-  }, [imageUrl]);
+
+    localforage
+      .setItem(localforageImageKey, imageBlob)
+      .catch((e) => console.warn(e));
+  }, []);
+
+  useEffect(() => {
+    localforage.getItem(localforageImageKey).then((blob) => {
+      if (blob instanceof Blob) {
+        setImage(blob);
+      }
+    });
+  }, [setImage]);
 
   const [hintPoints, setHintPoints] = useState<HintPoint[]>([]);
   const [selectedPoint, setSelectedPoint] = useState<number | undefined>(
@@ -92,17 +115,14 @@ function App(): ReactNode {
       : [imageWidth / imageHeight, 1];
   }, [imageTexture]);
 
-  const onDrop = useCallback((acceptedFiles: File[]): void => {
-    if (acceptedFiles.length > 0) {
-      setImageUrl((imageUrl) => {
-        if (imageUrl !== undefined) {
-          URL.revokeObjectURL(imageUrl);
-        }
-
-        return URL.createObjectURL(acceptedFiles[0]);
-      });
-    }
-  }, []);
+  const onDrop = useCallback(
+    (acceptedFiles: File[]): void => {
+      if (acceptedFiles.length > 0) {
+        setImage(acceptedFiles[0]);
+      }
+    },
+    [setImage],
+  );
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
     noClick: true,
